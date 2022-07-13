@@ -1,0 +1,11 @@
+# This file is covered by the LICENSE file in the root of this project.
+labels: 
+  0 : "unlabeled"
+  100: "clear"
+  101: "rain"
+  102: "fog"
+color_map: # bgr
+  0 : [0,0,0]
+  100: [30, 30, 255]
+  101: [220, 20, 60]
+  102: [255,255,255]
