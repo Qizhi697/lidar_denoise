@@ -315,13 +315,13 @@ class sa_layer(nn.Module):
 
 class WIRW(nn.Module):
     def __init__(
-            self, n_init, n_feats, wn=lambda x: torch.nn.utils.weight_norm(x), act=nn.ReLU(True)):
+            self, n_feats, wn=lambda x: torch.nn.utils.weight_norm(x), act=nn.ReLU(True)):
         super(WIRW, self).__init__()
         self.res_scale = Scale(1)
         self.x_scale = Scale(1)
         body = []
         body.append(
-            wn(nn.Conv2d(n_init, n_feats * 6, kernel_size=1, padding=0)))
+            wn(nn.Conv2d(n_feats, n_feats * 6, kernel_size=1, padding=0)))
         # body.append(nn.BatchNorm2d(n_feats))
         body.append(act)
         body.append(
@@ -333,12 +333,10 @@ class WIRW(nn.Module):
 
         self.body = nn.Sequential(*body)
         self.SAlayer = sa_layer(n_feats)
-        self.conv = nn.Conv2d(n_init, n_feats, kernel_size=1, padding=0)
 
     def forward(self, x):
-        y_down = self.conv(x)
-        y = self.res_scale(self.SAlayer(self.body(x))) + self.x_scale(y_down)
-        return y_down, y
+        y = self.res_scale(self.SAlayer(self.body(x))) + self.x_scale(x)
+        return y
 
 
 class WCRW(nn.Module):
@@ -386,18 +384,18 @@ class SCF(nn.Module):
 
 
 class Single_Block(nn.Module):
-    def __init__(self, n_init, nf):
+    def __init__(self, nf):
         super(Single_Block, self).__init__()
         self.act = nn.ReLU()
-        self.wirw = WIRW(n_init, nf)
+        self.wirw = WIRW(nf)
         # self.wirw2 = WIRW(nf)
         self.scf = SCF(nf)
         # self.wirw = WIRW(nf, ks, groups)
         # self.scf = SCF(nf, ks, groups)
 
     def forward(self, fea):
-        fea_down, fea_enh = self.wirw(fea)
-        fea_dis = self.scf(fea_down, fea_enh) + fea_down
+        fea_enh = self.wirw(fea)
+        fea_dis = self.scf(fea, fea_enh) + fea
         # fea_dis = self.act(self.scf(fea, fea_enh)) + fea
         # fea_dis = self.act(fea_enh) + fea
         # fea_dis = self.wirw2(fea_enh) + fea
@@ -410,21 +408,21 @@ class Var_Nine(nn.Module):
         self.k_dis = k_dis
         # self.lila1 = LiLaBlock(3, 32)
         if self.k_dis:
-            # self.lila1 = BasicConv2d(3, 32, kernel_size=1, padding=0)
-            self.block1 = Single_Block(3, 32)
+            self.lila1 = BasicConv2d(3, 32, kernel_size=1, padding=0)
+            # self.block1 = Single_Block(3, 32)
             # self.lila1 = LiLaBlock(3, 32)
         else:
-            # self.lila1 = BasicConv2d(2, 32, kernel_size=1, padding=0)
-            self.block1 = Single_Block(2, 32)
+            self.lila1 = BasicConv2d(2, 32, kernel_size=1, padding=0)
+            # self.block1 = Single_Block(2, 32)
             # self.lila1 = LiLaBlock(2, 32)
-        # self.block1 = Single_Block(32)
+        self.block1 = Single_Block(32)
         # self.lila2 = LiLaBlock(32, 64)
-        # self.lila2 = BasicConv2d(32, 64, kernel_size=1, padding=0)
-        self.block2 = Single_Block(32, 64)
+        self.lila2 = BasicConv2d(32, 64, kernel_size=1, padding=0)
+        self.block2 = Single_Block(64)
         # self.drop_layer = nn.Dropout()
         # self.lila3 = LiLaBlock(64, 32)
-        # self.lila3 = BasicConv2d(64, 32, kernel_size=1, padding=0)
-        self.block3 = Single_Block(64, 32)
+        self.lila3 = BasicConv2d(64, 32, kernel_size=1, padding=0)
+        self.block3 = Single_Block(32)
         self.classifier = nn.Conv2d(32, num_classes, kernel_size=(1, 1))
 
         for m in self.modules():
@@ -443,12 +441,12 @@ class Var_Nine(nn.Module):
         else:
             assert len(param_lists) == 2
             x = torch.cat([param_lists[0], param_lists[1]], 1)
-        # x = self.lila1(x)
+        x = self.lila1(x)
         x = self.block1(x)
-        # x = self.lila2(x)
+        x = self.lila2(x)
         x = self.block2(x)
         # x = self.drop_layer(x)
-        # x = self.lila3(x)
+        x = self.lila3(x)
         x = self.block3(x)
         x = self.classifier(x)
 
