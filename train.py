@@ -286,7 +286,7 @@ if __name__ == '__main__':
                         help='input batch size for training')
     parser.add_argument('--val-batch-size', type=int, default=16,
                         help='input batch size for validation')
-    parser.add_argument('--num-workers', type=int, default=16,
+    parser.add_argument('--num-workers', type=int, default=0,
                         help='number of workers')
     parser.add_argument('--epochs', type=int, default=300,
                         help='number of epochs to train')
@@ -294,7 +294,7 @@ if __name__ == '__main__':
                         help='learning rate')
     parser.add_argument('--seed', type=int, default=123,
                         help='manual seed')
-    parser.add_argument('--output-dir', default='checkpoints/dense_basicconv_ks=1_nodrop_nolila')
+    parser.add_argument('--output-dir', default='wads_basicconv_ks=1_final1')
     parser.add_argument('--resume', type=str,
                         default='',
                         help='path to latest checkpoint (default: none)')
