@@ -294,7 +294,7 @@ if __name__ == '__main__':
                         help='learning rate')
     parser.add_argument('--seed', type=int, default=123,
                         help='manual seed')
-    parser.add_argument('--output-dir', default='wads_basicconv_ks=1_noscfwcrw_re')
+    parser.add_argument('--output-dir', default='wads_basicconv_ks=1_basicwirw_wcrw1')
     parser.add_argument('--resume', type=str,
                         default='',
                         help='path to latest checkpoint (default: none)')
