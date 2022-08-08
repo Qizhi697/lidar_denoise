@@ -41,12 +41,26 @@ class DENSE(data.Dataset):
         self.split = os.path.join(self.root, '{}'.format(split))
         self.transform = transform
         self.k_dis = k_dis
-        self.data = {'distance': [], 'intensity': []}
+        # self.data = {'distance': [], 'intensity': [], 'kdistance': []}
         self.label = []
-        self.lidar = [os.path.join(r, file) for r, d, f in os.walk(self.split) for file in f]
+        self.lidar = []
+        if self.k_dis:
+            self.data = {'distance': [], 'intensity': [], 'kdistance': []}
+            for i, dir in enumerate(['h5py', 'knn']):
+                self.lidar.append(
+                    [os.path.join(r, file) for r, d, f in os.walk(os.path.join(self.split, dir)) for file in f])
+            self.lidar[0].sort()
+            self.lidar[1].sort()
+        else:
+            self.data = {'distance': [], 'intensity': []}
+            for i, dir in enumerate(['h5py']):
+                self.lidar.append(
+                    [os.path.join(r, file) for r, d, f in os.walk(os.path.join(self.split, dir)) for file in f])
+            self.lidar[0].sort()
+        # self.lidar = [os.path.join(r, file) for r, d, f in os.walk(self.split) for file in f]
         print("Loading Data")
         label_dict = {0: 0, 100: 1, 101: 2, 102: 3}
-        for i, file in enumerate(tqdm(self.lidar)):
+        for i, file in enumerate(tqdm(self.lidar[0])):
             with h5py.File(file, "r", driver='core') as hdf5:
                 distance_1 = hdf5.get('distance_m_1')[()]
                 reflectivity_1 = hdf5.get('intensity_1')[()]
@@ -55,17 +69,24 @@ class DENSE(data.Dataset):
             self.label.append(label_1)
             self.data['distance'].append(distance_1)
             self.data['intensity'].append(reflectivity_1)
+            if self.k_dis:
+                k_distance = np.fromfile(self.lidar[1][i], dtype=np.float32).reshape(32, 400)
+                self.data['kdistance'].append(k_distance)
 
     def __getitem__(self, index):
-        file_id = self.lidar[index].split('/')[-1].split('.')[0]
+        file_id = self.lidar[0][index].split('/')[-1].split('.')[0]
         label_1 = np.array(self.label[index])
         distance_1 = np.array(self.data['distance'][index])
         reflectivity_1 = np.array(self.data['intensity'][index])
         distance = torch.as_tensor(distance_1.astype(np.float32, copy=False)).contiguous()
         reflectivity = torch.as_tensor(reflectivity_1.astype(np.float32, copy=False)).contiguous()
         label = torch.as_tensor(label_1.astype(np.float32, copy=False)).contiguous()
+        if self.k_dis:
+            k_distance = torch.as_tensor(self.data['kdistance'][index])
+            param_lists = [distance, reflectivity, k_distance]
+        else:
+            param_lists = [distance, reflectivity]
 
-        param_lists = [distance, reflectivity]
         if self.transform:
             param_lists, label = self.transform(param_lists, label)
         return param_lists, label, file_id, -1

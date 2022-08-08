@@ -63,10 +63,13 @@ class DENSE(data.Dataset):
         file_id = points_file.split('/')[-1].split('.')[0]
         # labels_file = os.path.join(self.split, 'labels', file_id + '.label')
         points = np.fromfile(points_file, dtype=np.float32).reshape(-1, 4)
-        labels = np.fromfile(self.lidar[1][index], dtype=np.uint32).reshape(-1)
+        try:
+            labels = np.fromfile(self.lidar[1][index], dtype=np.uint32).reshape(-1)
+        except:
+            labels = points[:, -1]
         if self.k_dis:
             k_dis = np.fromfile(self.lidar[2][index], dtype=np.float32).reshape(-1)
-        point_num = len(labels)
+        point_num = len(points)
         n = point_num // self.size
         distance = np.sqrt(points[:, 0] ** 2 + points[:, 1] ** 2 + points[:, 2] ** 2)
         intensity = points[:, 3]
@@ -78,29 +81,35 @@ class DENSE(data.Dataset):
         # labels[(labels == 110) | (labels == 111)] = 101
         # labels[(labels != 101) & (labels != 0)] = 100
 
-        labels[labels == 110] = 101
-        labels[(labels != 101) & (labels != 0)] = 100
-        index = np.arange(0, n * self.size)
+        labels[(labels != 110) & (labels != 0)] = 100
+
+        # labels = labels.astype(int)
+        # labels[labels == 2] = 101
+        # labels[(labels != 101)] = 100
+
+        order = np.arange(0, n * self.size)
         if point_num % self.size > self.H:
             end = point_num - point_num % self.H
             start = (2 * n + 1) * self.size - end
-            res_index = np.arange(end - self.size, end)
-            index = np.append(index, res_index)
-            index = index.reshape((n + 1, self.W, self.H)).transpose(0, 2, 1).astype(int)
+            res_order = np.arange(end - self.size, end)
+            order = np.append(order, res_order)
+            order = order.reshape((n + 1, self.W, self.H)).transpose(0, 2, 1).astype(int)
         else:
             start = -1
-            index = index.reshape((n, self.W, self.H)).transpose(0, 2, 1).astype(int)
-
-        label_dict = {0: 0, 100: 1, 101: 2}
-        label_1 = np.vectorize(label_dict.get)(labels[index])
+            order = order.reshape((n, self.W, self.H)).transpose(0, 2, 1).astype(int)
+        # WADS label : 0--unlabel; 100-clear; 2--falling snow
+        label_dict = {0: 0, 100: 1, 110: 2}
+        label_1 = np.vectorize(label_dict.get)(labels[order])
         label = torch.as_tensor(label_1)
-        distance = torch.as_tensor(distance[index])
-        reflectivity = torch.as_tensor(intensity[index])
+        distance = torch.as_tensor(distance[order])
+        reflectivity = torch.as_tensor(intensity[order])
         if self.k_dis:
-            k_dis = torch.as_tensor(k_dis[index])
+            k_dis = torch.as_tensor(k_dis[order])
             if self.transform:
                 for i in range(len(distance)):
-                    [distance[i], reflectivity[i], k_dis[i]], label[i] = self.transform([distance[i], reflectivity[i], k_dis[i]], label[i])
+                    [distance[i], reflectivity[i], k_dis[i]], label[i] = self.transform(
+                        [distance[i], reflectivity[i], k_dis[i]], label[i])
+                    # [distance[i], reflectivity[i], k_dis[i]] = self.transform([distance[i], reflectivity[i], k_dis[i]])
             param_lists = [distance, reflectivity, k_dis]
         else:
             if self.transform:

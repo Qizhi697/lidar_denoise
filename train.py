@@ -234,7 +234,6 @@ def run(args):
         epoch = trainer.state.epoch if trainer.state is not None else 1
         iou = engine.state.metrics['IoU'] * 100.0
         # mean_iou = iou.mean()
-
         # name = 'epoch{}_mIoU={:.1f}.pth'.format(epoch, mean_iou)
         name = 'epoch{}_mIoU={:.1f}.pth'.format(epoch, iou[-1])
         # file = {'model': model.state_dict(), 'epoch': epoch, 'optimizer': optimizer.state_dict(), 'args': args}
@@ -288,13 +287,13 @@ if __name__ == '__main__':
                         help='input batch size for validation')
     parser.add_argument('--num-workers', type=int, default=16,
                         help='number of workers')
-    parser.add_argument('--epochs', type=int, default=300,
+    parser.add_argument('--epochs', type=int, default=600,
                         help='number of epochs to train')
     parser.add_argument('--lr', type=float, default=8e-4,
                         help='learning rate')
     parser.add_argument('--seed', type=int, default=123,
                         help='manual seed')
-    parser.add_argument('--output-dir', default='wads_basicconv_ks=1_basicwirw_wcrw1')
+    parser.add_argument('--output-dir', default='wads_3c_nosa_nores')
     parser.add_argument('--resume', type=str,
                         default='',
                         help='path to latest checkpoint (default: none)')
@@ -304,7 +303,7 @@ if __name__ == '__main__':
                         help='how many batches to wait before logging training status')
     parser.add_argument("--log-dir", type=str, default="logs",
                         help="log directory for Tensorboard log output")
-    parser.add_argument("--dataset-dir", type=str, default="/data1/mayq/datasets/WADS",
+    parser.add_argument("--dataset-dir", type=str, default="/data/mayq/datasets/WADS",
                         help="location of the dataset")
     parser.add_argument("--eval-on-start", type=bool, default=False,
                         help="evaluate before training")

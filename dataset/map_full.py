@@ -6,7 +6,6 @@ import numpy as np
 import torch
 import torch.utils.data as data
 from PIL import Image
-import h5py
 
 from dataset.transforms import Compose, RandomHorizontalFlip, Normalize
 
@@ -28,8 +27,7 @@ class DENSE(data.Dataset):
     classes = [
         Class('nolabel', 0, (0, 0, 0)),
         Class('clear', 100, (255, 0, 0)),
-        Class('snow1', 101, (0, 0, 255)),
-        # Class('snow2', 102, (119, 11, 32)),
+        Class('snow', 101, (0, 0, 255)),
     ]
     pr = [
         Class('Precison', 0, (0, 0, 0)),
@@ -72,16 +70,14 @@ class DENSE(data.Dataset):
             distance = np.sqrt(points[:, 0] ** 2 + points[:, 1] ** 2 + points[:, 2] ** 2)
             intensity = points[:, 3]
 
-            # labels[(labels == 0)] = 0
-            # labels[(labels == 110)] = 101
-            # labels[(labels == 111)] = 102
-            # labels[(labels != 0) & (labels != 101) & (labels != 102)] = 100
+            # labels[labels == 110] = 101
+            # labels[(labels != 101)] = 100
 
-            # labels[(labels == 110) | (labels == 111)] = 101
-            # labels[(labels != 101) & (labels != 0)] = 100
+            labels[(labels != 110) & (labels != 0)] = 100
+            # labels = labels.astype(int)
+            # labels[labels == 2] = 101
+            # labels[(labels != 101)] = 100
 
-            labels[labels == 110] = 101
-            labels[(labels != 101)] = 100
             # 64c
             index = np.arange(0, n * self.size)
             if points_num % self.size > self.H:
@@ -103,12 +99,8 @@ class DENSE(data.Dataset):
                 self.data['kdistance'].extend(k_distance)
 
     def __getitem__(self, index):
-        # label_1 = np.array(self.label[index])
-        # distance_1 = np.array(self.data['distance'][index])
-        # reflectivity_1 = np.array(self.data['intensity'][index])
-        # k_distance_1 = np.array(self.data['kdistance'][index])
-        # label_dict = {0: 0, 100: 1, 101: 2, 102: 3}
-        label_dict = {0: 0, 100: 1, 101: 2}
+        # label_dict = {0: 0, 100: 1, 101: 2}
+        label_dict = {0: 0, 100: 1, 110: 2}
         label_1 = np.vectorize(label_dict.get)(self.label[index])
         label = torch.as_tensor(label_1)
         distance = torch.as_tensor(self.data['distance'][index])
@@ -119,10 +111,6 @@ class DENSE(data.Dataset):
         else:
             param_lists = [distance, reflectivity]
 
-        # distance = torch.as_tensor(distance_1.astype(np.float32, copy=False)).contiguous()
-        # reflectivity = torch.as_tensor(reflectivity_1.astype(np.float32, copy=False)).contiguous()
-        # k_distance = torch.as_tensor(k_distance_1.astype(np.float32, copy=False)).contiguous()
-        # label = torch.as_tensor(label_1.astype(np.float32, copy=False)).contiguous()
         if self.transform:
             param_lists, label = self.transform(param_lists, label)
         return param_lists, label
