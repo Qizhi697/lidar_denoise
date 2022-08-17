@@ -4,7 +4,8 @@ import torch.hub as hub
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
-
+import scipy.spatial as spatial
+# from pypapi import events, papi_high as high
 
 # pretrained_models = {
 #     'kitti': {
@@ -262,6 +263,7 @@ class WIRW(nn.Module):
         self.conv = BasicConv2d(n_feats, n_feats, kernel_size=1, padding=0)
 
     def forward(self, x):
+        # y = self.res_scale(self.body(x)) + self.x_scale(x)
         y = self.res_scale(self.body(x)) + self.x_scale(self.conv(x))
         # y = self.res_scale(self.SAlayer(self.body(x))) + self.x_scale(y_down)
         return y
@@ -302,10 +304,12 @@ class SCF(nn.Module):
         self.scale_x1 = Scale(1)
         self.scale_x2 = Scale(1)
         self.fuse1 = WCRW(nf * 2)
+        # self.fuse1 = WIRW(nf)
         # self.fuse2 = nn.Conv2d(2 * nf, nf, kernel_size=1, stride=1, padding=0, dilation=1)
 
     def forward(self, inp1, inp2):
         inp = torch.cat([self.scale_x1(inp1), self.scale_x2(inp2)], dim=1)
+        # inp = self.scale_x1(inp1) + self.scale_x2(inp2)
         out1 = self.fuse1(inp)
         # out2 = self.sigmoid(self.fuse2(inp)) * inp2
         # out = out1 + out2
@@ -331,10 +335,21 @@ class Single_Block(nn.Module):
         # fea_dis = self.scf(fea, fea_enh)
         return fea_dis
 
+class Pre_Knn(nn.Module):
+    def __init__(self):
+        super(Pre_Knn, self).__init__()
+
+    def forward(self, param_lists):
+        points = np.stack((param_lists[2].reshape(-1), param_lists[3].reshape(-1), param_lists[4].reshape(-1)), axis=1)
+        kdtree = spatial.cKDTree(points, 50)
+        dd, _ = kdtree.query(points, k=30)
+        mean_dis = np.mean(dd, axis=1).astype(np.float32)
+        return mean_dis
 
 class Var_Nine(nn.Module):
     def __init__(self, num_classes=4, k_dis=True):
         super(Var_Nine, self).__init__()
+        # self.knn = Pre_Knn()
         self.k_dis = k_dis
         # self.lila1 = LiLaBlock(3, 32)
         if self.k_dis:
@@ -368,6 +383,15 @@ class Var_Nine(nn.Module):
         if self.k_dis:
             assert len(param_lists) == 3
             x = torch.cat([param_lists[0], param_lists[1], param_lists[2]], 1)
+            # high.start_counters([events.PAPI_FP_OPS, ])
+            # points = np.stack((param_lists[2].reshape(-1), param_lists[3].reshape(-1), param_lists[4].reshape(-1)), axis=1)
+            # kdtree = spatial.cKDTree(points, 50)
+            # dd, _ = kdtree.query(points, k=30)
+            # mean_dis = np.mean(dd, axis=1).astype(np.float32)
+            # x = high.stop_counters()
+            # print("numpy FLOPs:", x)
+            # mean_dis = self.knn(param_lists)
+            # x = torch.cat([param_lists[0], param_lists[1], torch.tensor(mean_dis.reshape(32, 400)).unsqueeze(0).unsqueeze(0).cuda()], 1)
         else:
             assert len(param_lists) == 2
             x = torch.cat([param_lists[0], param_lists[1]], 1)

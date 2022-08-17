@@ -79,14 +79,18 @@ class LaserScan:
         scan = np.fromfile(filename, dtype=np.float32)
         scan = scan.reshape((-1, 4))
         # with h5py.File(filename, "r", driver='core') as hdf5:
-        #     X = hdf5.get('sensorX_1')[()].transpose(1, 0).reshape(-1)
-        #     Y = hdf5.get('sensorY_1')[()].transpose(1, 0).reshape(-1)
+        #     X = hdf5.get('sensorX_1')[()].transpose(1, 0).reshape(-1)-10
+        #     Y = hdf5.get('sensorY_1')[()].transpose(1, 0).reshape(-1)-1
         #     Z = hdf5.get('sensorZ_1')[()].transpose(1, 0).reshape(-1)
         #     ref = hdf5.get('intensity_1')[()].transpose(1, 0).reshape(-1)
         # scan = np.stack([X, Y, Z, ref], axis=1)
         # put in attribute
         points = scan[:, 0:3]  # get xyz
         remissions = scan[:, 3]  # get remission
+
+        # get knn-mandis
+        # self.meandis = np.fromfile(filename.split('velodyne')[0]+'meandis2'+filename.split('velodyne')[1], dtype=np.float32).reshape(-1)
+
         self.set_points(points, remissions)
 
     def set_points(self, points, remissions=None):
@@ -112,6 +116,9 @@ class LaserScan:
 
         depth = np.linalg.norm(self.points, 2, axis=1)
         self.unproj_range = np.copy(depth)
+        # self.unproj_range = np.copy(self.remissions)
+        # self.unproj_range = np.copy(self.meandis)
+
         # if projection is wanted, then do it and fill in the structure
         if self.project:
             self.do_range_projection()
@@ -181,7 +188,7 @@ class LaserScan:
 
 class SemLaserScan(LaserScan):
     """Class that contains LaserScan with x,y,z,r,sem_label,sem_color_label,inst_label,inst_color_label"""
-    EXTENSIONS_LABEL = ['.label', 'hdf5']
+    EXTENSIONS_LABEL = ['.label', 'hdf5', 'bin']
 
     def __init__(self, nclasses, sem_color_dict=None, project=False, H=64, W=1024, fov_up=3.0, fov_down=-25.0,
                  noise_labels=None, pred_noise=None, show_clear=False, show_denoised=False):
@@ -276,10 +283,8 @@ class SemLaserScan(LaserScan):
         label = np.fromfile(filename, dtype=np.uint32)
         self.sem_prelabel = label.reshape((-1))
         self.sem_prelabel_bin = self.sem_label.copy()
-        self.sem_prelabel_bin[:len(self.sem_prelabel)][
-            [sem_prelabel in self.pred_noise for sem_prelabel in self.sem_prelabel]] = 0
-        # with h5py.File(filename, "r", driver='core') as hdf5:
-        #     label = hdf5.get('labels_1')[()].transpose(1, 0).reshape(-1)
+        self.sem_prelabel_bin[:len(self.sem_prelabel)][[sem_prelabel in self.pred_noise for sem_prelabel in self.sem_prelabel]] = 0
+
 
     def set_label(self, label):
         """ Set points for label not from file but from np
@@ -306,6 +311,8 @@ class SemLaserScan(LaserScan):
     def colorize(self):
         """ Colorize pointcloud with the color of each semantic label
         """
+        # self.sem_label[(self.sem_label!=0) & (self.sem_label!=110) & (self.sem_label!=111)]=40
+        # self.sem_label[(self.sem_label != 110) ] = 51
         self.sem_label_color = self.sem_color_lut[self.sem_label]
         # self.sem_label_color = self.sem_label_color.reshape((-1, 3))
         if self.show_clear:

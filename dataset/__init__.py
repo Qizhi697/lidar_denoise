@@ -1,1 +1,1 @@
-from .map_full import *
+from .bin_wise import *

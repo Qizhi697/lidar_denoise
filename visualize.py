@@ -13,7 +13,8 @@ if __name__ == '__main__':
         '--dataset', '-d',
         type=str,
         required=False,
-        default="/home/mayq/data1/datasets/WADS/val",
+        # default="E:\\localcode\\datasets\\cnn_denoising\\test\\h5py\\2018-11-29_111818_Static2-Rain55",
+        default="E:\\localcode\\datasets\\WADS\\test",
         help='Dataset to visualize. No Default',
     )
     parser.add_argument(
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--predictions', '-p',
         type=str,
-        default="/home/mayq/data1/lidar_denoise/result/86.4/",
+        default="E:\\localcode\\lidar_denoise\\result\\wads_3c_89.5",
         required=False,
         help='Alternate location for labels, to use predictions folder. '
              'Must point to directory containing the predictions in the proper format '
@@ -44,6 +45,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--noisy_labels', '-n',
         type=list,
+        # default=[101, 102],
         default=[110, 111],
         help='Noisy labels such as rain, snow, fog and so on...',
     )
@@ -54,25 +56,12 @@ if __name__ == '__main__':
         help='Predict noisy labels in prediction result file.',
     )
     parser.add_argument(
-        '--model_name',
-        type=str,
-        default='86.4',
-        help='Model used to output prediction results.',
-    )
-    # parser.add_argument(
-    #     '--offset',
-    #     type=int,
-    #     default=0,
-    #     required=False,
-    #     help='Sequence to start. Defaults to %(default)s',
-    # )
-    parser.add_argument(
         '--show_clear',
-        default=True,
+        default=False,
     )
     parser.add_argument(
         '--show_denoised',
-        default=True,
+        default=False,
     )
     parser.add_argument(
         '--ignore_safety',
@@ -106,7 +95,7 @@ if __name__ == '__main__':
         quit()
 
     # does dataset folder exist?
-    scan_paths = os.path.join(FLAGS.dataset, "velodyne")
+    scan_paths = os.path.join(FLAGS.dataset, 'velodyne')
     if os.path.isdir(scan_paths):
         print("dataset folder exists! Using velodyne folder %s" % scan_paths)
     else:
@@ -122,7 +111,7 @@ if __name__ == '__main__':
     if not FLAGS.ignore_semantics:
         if FLAGS.predictions is not None:
             pred_paths = FLAGS.predictions
-        label_paths = os.path.join(FLAGS.dataset, "labels")
+        label_paths = os.path.join(FLAGS.dataset, 'labels')
         if os.path.isdir(label_paths):
             print("Labels folder exists! Using labels from %s" % label_paths)
         else:
@@ -133,7 +122,7 @@ if __name__ == '__main__':
         label_names.sort()
         prelabel_names = None
         if FLAGS.show_denoised:
-            prelabel_paths = os.path.join('result', FLAGS.model_name)
+            prelabel_paths = os.path.join('result', FLAGS.predictions)
             prelabel_names = [os.path.join(dp, f) for dp, dn, fn in os.walk(prelabel_paths) for f in fn]
             prelabel_names.sort()
 
@@ -147,7 +136,7 @@ if __name__ == '__main__':
     else:
         color_dict = CFG["color_map"]
         nclasses = len(color_dict)
-        scan = SemLaserScan(nclasses, color_dict, project=True, noise_labels=FLAGS.noisy_labels,
+        scan = SemLaserScan(nclasses, color_dict, project=False, noise_labels=FLAGS.noisy_labels,
                             pred_noise=FLAGS.pred_noisy_labels, show_clear=FLAGS.show_clear, show_denoised=FLAGS.show_denoised)
 
     # create a visualizer

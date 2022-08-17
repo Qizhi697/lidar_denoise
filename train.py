@@ -1,6 +1,6 @@
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import warnings
 from argparse import ArgumentParser
 import torch
@@ -128,14 +128,9 @@ def run(args):
     def _prepare_batch(batch, non_blocking=True):
         param_lists, target = batch[:2]
         if args.k_dis:
-            return ([convert_tensor(param_lists[0], device=device, non_blocking=non_blocking),
-                     convert_tensor(param_lists[1], device=device, non_blocking=non_blocking),
-                     convert_tensor(param_lists[2], device=device, non_blocking=non_blocking)],
-                    convert_tensor(target, device=device, non_blocking=non_blocking))
+            return ([param_lists[0].cuda(), param_lists[1].cuda(), param_lists[2].cuda()], target.cuda())
         else:
-            return ([convert_tensor(param_lists[0], device=device, non_blocking=non_blocking),
-                     convert_tensor(param_lists[1], device=device, non_blocking=non_blocking)],
-                    convert_tensor(target, device=device, non_blocking=non_blocking))
+            return ([param_lists[0].cuda(), param_lists[1].cuda()], target.cuda())
 
     def _update(engine, batch):
         model.train()
@@ -200,7 +195,7 @@ def run(args):
     Loss(criterion_dense).attach(evaluator, 'loss')
     # Loss(criterion, output_transform=lambda x: (x[0], x[1], dict(point_weight=x[2]))).attach(evaluator, 'loss')
     mIoU(cm, ignore_index=0).attach(evaluator, 'mIoU')
-    PR(64, 400).attach(evaluator, 'PR')
+    PR(64, 50).attach(evaluator, 'PR')
     Loss(CEloss, output_transform=lambda x: (x[0], x[1])).attach(evaluator, 'CELoss')
 
     pbar2 = ProgressBar(persist=True, desc='Eval Epoch')
@@ -293,7 +288,7 @@ if __name__ == '__main__':
                         help='learning rate')
     parser.add_argument('--seed', type=int, default=123,
                         help='manual seed')
-    parser.add_argument('--output-dir', default='wads_3c_nosa_nores')
+    parser.add_argument('--output-dir', default='sim_34_110')
     parser.add_argument('--resume', type=str,
                         default='',
                         help='path to latest checkpoint (default: none)')
@@ -303,7 +298,7 @@ if __name__ == '__main__':
                         help='how many batches to wait before logging training status')
     parser.add_argument("--log-dir", type=str, default="logs",
                         help="log directory for Tensorboard log output")
-    parser.add_argument("--dataset-dir", type=str, default="/data/mayq/datasets/WADS",
+    parser.add_argument("--dataset-dir", type=str, default="/data1/mayq/datasets/WADS",
                         help="location of the dataset")
     parser.add_argument("--eval-on-start", type=bool, default=False,
                         help="evaluate before training")

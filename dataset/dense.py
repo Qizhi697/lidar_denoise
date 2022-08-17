@@ -41,11 +41,11 @@ class DENSE(data.Dataset):
         self.split = os.path.join(self.root, '{}'.format(split))
         self.transform = transform
         self.k_dis = k_dis
-        # self.data = {'distance': [], 'intensity': [], 'kdistance': []}
         self.label = []
         self.lidar = []
         if self.k_dis:
             self.data = {'distance': [], 'intensity': [], 'kdistance': []}
+            # self.data = {'distance': [], 'intensity': [], 'kdistance': [], 'X': [], 'Y': [], 'Z': []}
             for i, dir in enumerate(['h5py', 'knn']):
                 self.lidar.append(
                     [os.path.join(r, file) for r, d, f in os.walk(os.path.join(self.split, dir)) for file in f])
@@ -62,6 +62,9 @@ class DENSE(data.Dataset):
         label_dict = {0: 0, 100: 1, 101: 2, 102: 3}
         for i, file in enumerate(tqdm(self.lidar[0])):
             with h5py.File(file, "r", driver='core') as hdf5:
+                # X_1 = hdf5.get('sensorX_1')[()]
+                # Y_1 = hdf5.get('sensorY_1')[()]
+                # Z_1 = hdf5.get('sensorZ_1')[()]
                 distance_1 = hdf5.get('distance_m_1')[()]
                 reflectivity_1 = hdf5.get('intensity_1')[()]
                 label_1 = hdf5.get('labels_1')[()]
@@ -69,21 +72,31 @@ class DENSE(data.Dataset):
             self.label.append(label_1)
             self.data['distance'].append(distance_1)
             self.data['intensity'].append(reflectivity_1)
+            # self.data['X'].append(X_1)
+            # self.data['Y'].append(Y_1)
+            # self.data['Z'].append(Z_1)
             if self.k_dis:
                 k_distance = np.fromfile(self.lidar[1][i], dtype=np.float32).reshape(32, 400)
                 self.data['kdistance'].append(k_distance)
 
     def __getitem__(self, index):
-        file_id = self.lidar[0][index].split('/')[-1].split('.')[0]
+        file_id = self.lidar[0][index].split('h5py/')[-1].split('.')[0]
         label_1 = np.array(self.label[index])
         distance_1 = np.array(self.data['distance'][index])
         reflectivity_1 = np.array(self.data['intensity'][index])
+        # X_1 = np.array(self.data['X'][index])
+        # Y_1 = np.array(self.data['Y'][index])
+        # Z_1 = np.array(self.data['Z'][index])
         distance = torch.as_tensor(distance_1.astype(np.float32, copy=False)).contiguous()
         reflectivity = torch.as_tensor(reflectivity_1.astype(np.float32, copy=False)).contiguous()
         label = torch.as_tensor(label_1.astype(np.float32, copy=False)).contiguous()
+        # X = torch.as_tensor(X_1.astype(np.float32, copy=False)).contiguous()
+        # Y = torch.as_tensor(Y_1.astype(np.float32, copy=False)).contiguous()
+        # Z = torch.as_tensor(Z_1.astype(np.float32, copy=False)).contiguous()
         if self.k_dis:
             k_distance = torch.as_tensor(self.data['kdistance'][index])
             param_lists = [distance, reflectivity, k_distance]
+            # param_lists = [distance, reflectivity, X, Y, Z]
         else:
             param_lists = [distance, reflectivity]
 
