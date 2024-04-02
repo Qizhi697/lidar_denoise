@@ -1,5 +1,12 @@
 # Lidar Denoise  轻量级激光雷达点云降噪网络
 
+For more details on the research behind this project, please refer to the following paper:
+
+- **Title**: LAPRNet: Lightweight Airborne Particle Removal Network for LiDAR Point Clouds
+- **Link**: [Springer Link](https://link.springer.com/chapter/10.1007/978-981-97-0376-0_22#citeas)
+
+Please cite this paper if you use our project in your research.
+
 ## 简介
 本项目提出了一种新的轻量级网络，用于过滤恶劣天气条件下激光雷达点云中的噪点。该网络采用宽度多级残差模块（WMLR）架构，集成了宽激活、多级残差连接和shuffle attention机制，以实现高效的点云预处理。此外，本文还介绍了增强型激光雷达数据表示，以提升系统性能。
 
